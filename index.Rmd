@@ -18,6 +18,8 @@ library(knitr)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+El código fuente de este documento está disponible en [https://github.com/pf0953-programaciongeoespacialr-2020/leccion-08-r-leaflet](https://github.com/pf0953-programaciongeoespacialr-2020/leccion-08-r-leaflet).
+
 ## Recursos de interés
 * Sitio web del curso: [PF0953 Programación geoespacial en R](https://pf0953-programaciongeoespacialr-2020.github.io/)
 * Datos utilizados en el curso: [Datos del curso PF0953 Programación geoespacial en R](https://github.com/pf0953-programaciongeoespacialr-2020/datos)
@@ -55,9 +57,9 @@ El [paquete Leaflet](https://cran.r-project.org/web/packages/leaflet/) permite a
 
 ## Uso básico
 Los pasos básicos para la creación de un mapa con Leaflet son:
-1. Crear un _widget_ mediante un llamado a la función ```leaflet()```.
-2. Añadir capas (mapas base, marcadores, puntos, líneas, polígonos, etc.).
-3. Añadir controles (ej. leyenda, escala).
+1. Crear un _widget_ mediante un llamado a la función ```leaflet()```.  
+2. Añadir capas (mapas base, marcadores, puntos, líneas, polígonos, etc.).  
+3. Añadir controles (ej. leyenda, escala).  
 4. Desplegar el mapa.
 
 El siguiente ejemplo ilustra estos pasos:
@@ -66,7 +68,10 @@ El siguiente ejemplo ilustra estos pasos:
 # Definición de mapa con capa base y con marcador 
 m <- leaflet() %>%
   addTiles() %>%  # Añadir capa base
-  addMarkers(lng=-84.0427264, lat=9.9380638, popup="Escuela de Geografía de la Universidad de Costa Rica") 
+  addMarkers(
+    lng=-84.0427264, lat=9.9380638, 
+    popup="Escuela de Geografía de la Universidad de Costa Rica"
+  ) 
 
 # Despliegue del mapa
 m
@@ -81,8 +86,13 @@ m <- leaflet() %>%
   addTiles() %>%
   addProviderTiles(providers$Stamen.TonerLite, group = "Stamen Toner Lite") %>%
   addProviderTiles(providers$OpenStreetMap.Mapnik, group = "OpenStreetMap") %>%  
-  addMarkers(lng=-84.0427264, lat=9.9380638, popup="Escuela de Geografía de la Universidad de Costa Rica") %>%  
-  addLayersControl(baseGroups = c("OpenStreetMap", "Stamen Toner Lite", "Imágenes de ESRI"))
+  addMarkers(lng=-84.0427264, lat=9.9380638, 
+             popup="Escuela de Geografía de la Universidad de Costa Rica"
+  ) %>%  
+  addLayersControl(
+    baseGroups = c("OpenStreetMap", "Stamen Toner Lite", "Imágenes de ESRI")
+  )
+
 # Despliegue del mapa
 m
 ```
@@ -91,18 +101,21 @@ m
 El siguiente ejemplo ilustra el uso de método para añadir controles, como ```addLayersControl()``` (leyenda) y ```addMiniMapl()``` (mapa de referencia). También se ejemplifica el uso de ```addCircleMarkers()```.
 
 ```{r}
-mammalia = st_read("https://raw.githubusercontent.com/geoprocesamiento-2020i/datos/master/biodiversidad/registros-presencia/cr/gam/mammalia.geojson")
+mammalia <- 
+  st_read("https://raw.githubusercontent.com/geoprocesamiento-2020i/datos/master/biodiversidad/registros-presencia/cr/gam/mammalia.geojson")
 
 m <- leaflet() %>% 
   addProviderTiles(providers$Esri.WorldImagery, group = "Imágenes de ESRI") %>% 
   addProviderTiles(providers$Stamen.TonerLite, group = "Stamen Toner Lite") %>%
   addProviderTiles(providers$OpenStreetMap.Mapnik, group = "OpenStreetMap") %>%
-  addCircleMarkers(data = mammalia,
-                   stroke = F,
-                   radius = 4,
-                   fillColor = 'red',
-                   fillOpacity = 1,
-                   popup = paste(mammalia$order, mammalia$species, sep = '<br/>')) %>%
+  addCircleMarkers(
+    data = mammalia,
+    stroke = F,
+    radius = 4,
+    fillColor = 'red',
+    fillOpacity = 1,
+    popup = paste(mammalia$order, mammalia$species, sep = '<br/>')
+  ) %>%
   addLayersControl(baseGroups = c("OpenStreetMap", "Stamen Toner Lite", "Imágenes de ESRI")) %>%
   addMiniMap(
     toggleDisplay = TRUE,
