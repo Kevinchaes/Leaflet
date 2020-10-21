@@ -31,6 +31,9 @@ Instalación de paquetes:
 ```{r eval = FALSE}
 # Leaflet
 install.packages("leaflet")
+
+# tidyr
+install.packages("tidyr")
 ```
 
 Carga de paquetes:
@@ -40,6 +43,12 @@ library(leaflet)
 
 # sf
 library(sf)
+
+# tidyr
+library(tidyr)
+
+# dplyr
+library(dplyr)
 ```
 
 ## Introducción
@@ -126,4 +135,78 @@ m <- leaflet() %>%
 
 # Despliegue del mapa
 m
+```
+
+## Mapas de coropletas
+En el siguiente ejemplo. se cargan en un objeto sf los datos de casos activos de COVID-19 en los cantones de Costa Rica, de acuerdo con la información publicada por el [Ministerio de Salud de Costa Rica](http://geovision.uned.ac.cr/oges/). Para procesar y transformar los datos, se utilizan los paquetes ```dplyr``` y ```tidyr```.
+
+```{r message=FALSE, warning=FALSE}
+# Lectura de la capa de cantones de un archivo GeoJSON
+sf_cantones <-
+  st_read(
+          "https://raw.githubusercontent.com/taller-r-jornadas-sigtd-2020/datos/master/cantones.geojson", 
+          quiet = T
+)
+
+# Data frame de casos activos por cantón, con fechas en las columnas
+df_activos_cantones_ancho <- 
+  read.csv(
+    "https://raw.githubusercontent.com/pf0953-programaciongeoespacialr-2020/datos/master/covid19/ms/covid19-activos-cantones-20201020.csv"
+    )
+
+# Data frame con fechas en las filas
+df_activos_cantones <-
+  df_activos_cantones_ancho %>%
+  pivot_longer(
+    cols = c(-cod_provin, -provincia, -cod_canton, -canton), 
+    names_to = "fecha", 
+    values_to = "activos"
+  )
+
+# Cambio de tipo de la columna "fecha"
+df_activos_cantones$fecha <- as.Date(df_activos_cantones$fecha, "X%d.%m.%Y")
+
+# Data frame de casos activos por cantón en la última fecha
+df_activos_cantones_ultima_fecha <- 
+  df_activos_cantones %>%
+  filter(fecha == max(fecha, na.rm = TRUE)) %>%
+  select(cod_canton, activos)
+
+# Objeto sf de casos activos en cantones en la última fecha
+sf_activos_cantones_ultima_fecha <-
+  left_join(sf_cantones, df_activos_cantones_ultima_fecha, by = c('cod_canton')) %>%
+  arrange(desc(activos))
+```
+
+Luego, se utiliza Leaflet para construir un [mapa de coropletas](https://rstudio.github.io/leaflet/choropleths.html).
+```{r message=FALSE, warning=FALSE}
+bins <- c(0, 100, 500, 1000, 2000, Inf)
+paleta_azul <- colorBin("YlOrRd", domain = sf_activos_cantones_ultima_fecha$activos, bins = bins)
+
+leaflet(sf_activos_cantones_ultima_fecha) %>% 
+  fitBounds(lng1 = -86, lng2 = -82, lat1 = 8, lat2 = 11) %>%
+  addProviderTiles(providers$OpenStreetMap.Mapnik, group = "OpenStreetMap") %>%
+  addPolygons(fillColor = ~paleta_azul(activos), stroke=T, fillOpacity = 1,
+              color="black", weight=0.2, opacity= 0.5,
+              group = "Cantones",
+              popup = paste(
+                        "Provincia: ", sf_activos_cantones_ultima_fecha$provincia, "<br>",
+                        "Cantón: ", sf_activos_cantones_ultima_fecha$canton, "<br>",
+                        "activos: ", sf_activos_cantones_ultima_fecha$activos
+                      )
+  ) %>%
+  addLegend("bottomright", pal = paleta_azul, values = ~activos,
+    title = "Casos activos",
+    opacity = 1
+  ) %>%  
+  addLayersControl(
+    baseGroups = c("OpenStreetMap"),
+    overlayGroups = c("Cantones"),
+    options = layersControlOptions(collapsed = TRUE)    
+  ) %>%  
+  addMiniMap(
+    toggleDisplay = TRUE,
+    position = "bottomleft",
+    tiles = providers$OpenStreetMap.Mapnik
+  )
 ```
