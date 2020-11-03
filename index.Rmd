@@ -1,6 +1,6 @@
 ---
 title: "El paquete Leaflet"
-author: "Manuel Vargas"
+author: 
 date: "2020-10-21"
 output:
   html_document:
@@ -18,190 +18,128 @@ library(knitr)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-El código fuente de este documento está disponible en [https://github.com/pf0953-programaciongeoespacialr-2020/leccion-08-r-leaflet](https://github.com/pf0953-programaciongeoespacialr-2020/leccion-08-r-leaflet).
 
-## Recursos de interés
-* Sitio web del curso: [PF0953 Programación geoespacial en R](https://pf0953-programaciongeoespacialr-2020.github.io/)
-* Datos utilizados en el curso: [Datos del curso PF0953 Programación geoespacial en R](https://github.com/pf0953-programaciongeoespacialr-2020/datos)
-* [Geocomputation with R - Chapter 8 Making maps with R](https://geocompr.robinlovelace.net/adv-map.html)
-* Sitio web del paquete Leaflet para R: [Leaflet for R](https://rstudio.github.io/leaflet/)
-
-## Preparativos
-Instalación de paquetes:
-```{r eval = FALSE}
-# Leaflet
-install.packages("leaflet")
-
-# tidyr
-install.packages("tidyr")
-```
-
-Carga de paquetes:
 ```{r message = FALSE}
-# Leaflet
-library(leaflet)
-
-# sf
 library(sf)
-
-# tidyr
-library(tidyr)
-
-# dplyr
 library(dplyr)
+library(leaflet)
+library(dplyr)
+library(tidyr)
 ```
-
-## Introducción
-[Leaflet](http://leafletjs.com/) es una de las bibliotecas más utilizadas para la creación de mapas interactivos en la Web. Está escrita en el lenguaje [JavaScript](https://en.wikipedia.org/wiki/JavaScript) y también puede utilizarse a través de otros lenguajes de programación, como [Python](http://python-visualization.github.io/folium/) y R.
-
-El [paquete Leaflet](https://cran.r-project.org/web/packages/leaflet/) permite acceder la funcionalidad de Leaflet a través de R. Entre las capacidades que proporciona Leaflet están:
-
-- Capas base (ej. OpenStreetMap, Stamen, ESRI).
-- Capas vectoriales y raster.
-- Mapas temáticos (ej. coropletas).
-- Marcadores.
-- Acercamientos (_zoom in_) y alejamientos (_zoom out_).
-- Leyendas.
-- Escalas.
-
-## Uso básico
-Los pasos básicos para la creación de un mapa con Leaflet son:
-1. Crear un _widget_ mediante un llamado a la función [leaflet()](https://www.rdocumentation.org/packages/leaflet/versions/2.0.3/topics/leaflet).  
-2. Añadir capas (mapas base, marcadores, puntos, líneas, polígonos, etc.).  
-3. Añadir controles (ej. leyenda, escala).  
-4. Desplegar el mapa.
-
-El siguiente ejemplo ilustra estos pasos:
 
 ```{r}
-# Definición de mapa con capa base y con marcador 
-m <- leaflet() %>%
-  addTiles() %>%  # Añadir capa base
-  addMarkers(
-    lng=-84.0427264, lat=9.9380638, 
-    popup="Escuela de Geografía de la Universidad de Costa Rica"
-  ) 
-
-# Despliegue del mapa
-m
+cr_cantones <- st_read(paste0("http://geos.snitcr.go.cr/be/IGN_5/wfs?", "request=GetFeature&service=WFS&version=2.0.0&typeName=IGN_5:limitecantonal_5k&outputFormat=application/json")) %>%
+  st_simplify(dTolerance = 1000) %>% 
+  st_transform(4326) -> sf_cantones
 ```
 
-## Capas base
-El método [addProviderTiles()](https://www.rdocumentation.org/packages/leaflet/versions/2.0.3/topics/addProviderTiles) permite añadir [mapas de teselas](https://en.wikipedia.org/wiki/Tiled_web_map), generalmente como capas base de un mapa. El sitio [Leaflet Provider Demo](https://leaflet-extras.github.io/leaflet-providers/preview/) proporciona una lista de capas base que pueden utilizarse.
 
 ```{r}
-# Definición de mapa con capa base y con marcador 
-m <- leaflet() %>%
-  addTiles() %>% # Agrega una capa base de OSM
-  addProviderTiles(providers$Stamen.TonerLite, group = "Stamen Toner Lite") %>%
-  addProviderTiles(providers$Esri.WorldImagery, group = "Imágenes de ESRI") %>% 
-  addMarkers(lng=-84.0427264, lat=9.9380638, 
-             popup="Escuela de Geografía de la Universidad de Costa Rica"
-  ) %>%  
-  addLayersControl(
-    baseGroups = c("OpenStreetMap", "Stamen Toner Lite", "Imágenes de ESRI")
-  )
+{activos<- read.csv("https://raw.githubusercontent.com/pf0953-programaciongeoespacialr-2020/datos/master/covid19/ms/covid19-activos-cantones-20201027.csv") %>%
+  pivot_longer(
+  cols = c(-cod_provin, -provincia, -cod_canton, -canton), 
+  names_to = "fecha", 
+  values_to = "activos")
+activos$fecha<- as.Date(activos$fecha, "X%d.%m.%Y")
+activos <- activos %>%
+  filter(fecha == max(fecha, na.rm = TRUE))}
 
-# Despliegue del mapa
-m
-```
-
-## Controles
-El siguiente ejemplo ilustra el uso de método para añadir controles, como [addLayersControl()](https://www.rdocumentation.org/packages/leaflet/versions/2.0.3/topics/addLayersControl) (leyenda) y [addMiniMap()](https://www.rdocumentation.org/packages/leaflet/versions/2.0.3/topics/addMiniMap) (mapa de referencia). También se ejemplifica el uso de ```addCircleMarkers()```.
-
-```{r message=FALSE, warning=FALSE}
-mammalia <- 
-  st_read("https://raw.githubusercontent.com/pf0953-programaciongeoespacialr-2020/datos/master/biodiversidad/registros-presencia/cr/gam/mammalia.geojson")
-
-m <- leaflet() %>% 
-  addProviderTiles(providers$Esri.WorldImagery, group = "Imágenes de ESRI") %>% 
-  addProviderTiles(providers$Stamen.TonerLite, group = "Stamen Toner Lite") %>%
-  addProviderTiles(providers$OpenStreetMap.Mapnik, group = "OpenStreetMap") %>%
-  addCircleMarkers(
-    data = mammalia,
-    stroke = F,
-    radius = 4,
-    fillColor = 'red',
-    fillOpacity = 1,
-    popup = paste(mammalia$order, mammalia$species, sep = '<br/>')
-  ) %>%
-  addLayersControl(
-    baseGroups = c("OpenStreetMap", "Stamen Toner Lite", "Imágenes de ESRI")
-  ) %>%
-  addMiniMap(
-    toggleDisplay = TRUE,
-    tiles = providers$Stamen.TonerLite
-  )
-
-# Despliegue del mapa
-m
-```
-
-## Mapas de coropletas
-En el siguiente ejemplo. se cargan en un objeto sf los datos de casos activos de COVID-19 en los cantones de Costa Rica, de acuerdo con la información publicada por el [Ministerio de Salud de Costa Rica](http://geovision.uned.ac.cr/oges/). Para procesar y transformar los datos, se utilizan los paquetes ```dplyr``` y ```tidyr```.
-
-```{r message=FALSE, warning=FALSE}
-# Lectura de la capa de cantones de un archivo GeoJSON
-sf_cantones <-
-  st_read(
-          "https://raw.githubusercontent.com/taller-r-jornadas-sigtd-2020/datos/master/cantones.geojson", 
-          quiet = T
-)
-
-# Data frame de casos activos por cantón, con fechas en las columnas
-df_activos_cantones_ancho <- 
-  read.csv(
-    "https://raw.githubusercontent.com/pf0953-programaciongeoespacialr-2020/datos/master/covid19/ms/covid19-activos-cantones-20201020.csv"
-    )
-
-# Data frame con fechas en las filas
-df_activos_cantones <-
-  df_activos_cantones_ancho %>%
+  
+{fallecidos<- read.csv("https://raw.githubusercontent.com/pf0953-programaciongeoespacialr-2020/datos/master/covid19/ms/covid19-fallecidos-cantones-20201027.csv") %>%
   pivot_longer(
     cols = c(-cod_provin, -provincia, -cod_canton, -canton), 
     names_to = "fecha", 
-    values_to = "activos"
-  )
+    values_to = "fallecidos")
+fallecidos$fecha<- as.Date(fallecidos$fecha, "X%d.%m.%Y")
+fallecidos <- fallecidos %>%
+  filter(fecha == max(fecha, na.rm = TRUE))}
 
-# Cambio de tipo de la columna "fecha"
-df_activos_cantones$fecha <- as.Date(df_activos_cantones$fecha, "X%d.%m.%Y")
+{positivos<- read.csv("https://raw.githubusercontent.com/pf0953-programaciongeoespacialr-2020/datos/master/covid19/ms/covid19-positivos-cantones-20201027.csv") %>%
+  pivot_longer(
+    cols = c(-cod_provin, -provincia, -cod_canton, -canton), 
+    names_to = "fecha", 
+    values_to = "positivos")
+positivos$fecha<- as.Date(positivos$fecha, "X%d.%m.%Y")
+positivos <- positivos %>%
+  filter(fecha == max(fecha, na.rm = TRUE))}
 
-# Data frame de casos activos por cantón en la última fecha
-df_activos_cantones_ultima_fecha <- 
-  df_activos_cantones %>%
-  filter(fecha == max(fecha, na.rm = TRUE)) %>%
-  select(cod_canton, activos)
+{recuperados<- read.csv("https://raw.githubusercontent.com/pf0953-programaciongeoespacialr-2020/datos/master/covid19/ms/covid19-recuperados-cantones-20201027.csv") %>%
+  pivot_longer(
+    cols = c(-cod_provin, -provincia, -cod_canton, -canton), 
+    names_to = "fecha", 
+    values_to = "recuperados")
+recuperados$fecha<- as.Date(recuperados$fecha, "X%d.%m.%Y")
+recuperados <- recuperados %>%
+  filter(fecha == max(fecha, na.rm = TRUE))}
 
-# Objeto sf de casos activos en cantones en la última fecha
-sf_activos_cantones_ultima_fecha <-
-  left_join(sf_cantones, df_activos_cantones_ultima_fecha, by = c('cod_canton')) %>%
+datos <- cbind(activos, fallecidos, positivos, recuperados) %>%
+  select("activos", "fallecidos", "positivos", "recuperados", "cod_canton")
+
+df <- inner_join(sf_cantones, datos, by= c('cod_canton')) %>%
   arrange(desc(activos))
 ```
 
-Luego, se utiliza Leaflet para construir un [mapa de coropletas](https://rstudio.github.io/leaflet/choropleths.html).
-```{r message=FALSE, warning=FALSE}
-bins <- c(0, 100, 500, 1000, 2000, Inf)
-paleta_azul <- colorBin("YlOrRd", domain = sf_activos_cantones_ultima_fecha$activos, bins = bins)
+```{r}
+df <- inner_join(sf_cantones, datos, by= c('cod_canton')) %>%
+  arrange(desc(activos))
+```
 
-leaflet(sf_activos_cantones_ultima_fecha) %>% 
+```{r}
+bins <- c(0, 100, 500, 1000, 2000, Inf)
+paleta_activos <- colorBin("YlOrRd", domain = df$activos, bins = bins)
+paleta_positivos <- colorBin("YlOrRd", domain = df$positivos, bins = bins)
+paleta_fallecidos <- colorBin("YlOrRd", domain = df$fallecidos, bins = bins)
+paleta_recuperados <- colorBin("YlOrRd", domain = df$recuperados, bins = bins)
+
+```
+
+```{r}
+leaflet(df) %>% 
   fitBounds(lng1 = -86, lng2 = -82, lat1 = 8, lat2 = 11) %>%
   addProviderTiles(providers$OpenStreetMap.Mapnik, group = "OpenStreetMap") %>%
-  addPolygons(fillColor = ~paleta_azul(activos), stroke=T, fillOpacity = 1,
+  addProviderTiles(providers$Stamen.Toner, group = "StatementToner") %>%
+  addProviderTiles(providers$Esri.NatGeoWorldMap, group = "NatGeoWorldMap")%>%
+  addPolygons(fillColor = ~paleta_activos(activos), stroke=T, fillOpacity = 1,
               color="black", weight=0.2, opacity= 0.5,
-              group = "Cantones",
+              group = "Activos",
               popup = paste(
-                        "Provincia: ", sf_activos_cantones_ultima_fecha$provincia, "<br>",
-                        "Cantón: ", sf_activos_cantones_ultima_fecha$canton, "<br>",
-                        "activos: ", sf_activos_cantones_ultima_fecha$activos
-                      )
+                "Provincia: ", df$provincia, "<br>",
+                "Cant?n: ", df$canton, "<br>",
+                "Activos: ", df$activos
+              )
   ) %>%
-  addLegend("bottomright", pal = paleta_azul, values = ~activos,
-    title = "Casos activos",
-    opacity = 1
-  ) %>%  
+  addPolygons(fillColor = ~paleta_recuperados(recuperados), stroke=T, fillOpacity = 1,
+              color="black", weight=0.2, opacity= 0.5,
+              group = "Recuperados",
+              popup = paste(
+                "Provincia: ", df$provincia, "<br>",
+                "Cant?n: ", df$canton, "<br>",
+                "Recuperados: ", df$recuperados
+              )) %>%
+  addPolygons(fillColor = ~paleta_fallecidos(fallecidos), stroke=T, fillOpacity = 1,
+              color="black", weight=0.2, opacity= 0.5,
+              group = "Fallecidos",
+              popup = paste(
+                "Provincia: ", df$provincia, "<br>",
+                "Cant?n: ", df$canton, "<br>",
+                "Fallecidos: ", df$fallecidos
+              )) %>%
+  addPolygons(fillColor = ~paleta_positivos(positivos), stroke=T, fillOpacity = 1,
+              color="black", weight=0.2, opacity= 0.5,
+              group = "Positivos",
+              popup = paste(
+                "Provincia: ", df$provincia, "<br>",
+                "Cant?n: ", df$canton, "<br>",
+                "Positivos: ", df$positivos
+              )) %>% 
+  hideGroup(c("Recuperados", "Fallecidos", "Activos")) %>%
+  addLegend("bottomright", pal = paleta_activos, values = ~activos,
+            title = "",
+            opacity = 1
+  ) %>%
   addLayersControl(
-    baseGroups = c("OpenStreetMap"),
-    overlayGroups = c("Cantones"),
+    baseGroups = c("OpenStreetMap", "StatementToner", "NatGeoWorldMap"),
+    overlayGroups = c("Positivos", "Recuperados", "Fallecidos", "Activos"),
     options = layersControlOptions(collapsed = TRUE)    
   ) %>%  
   addMiniMap(
@@ -210,3 +148,4 @@ leaflet(sf_activos_cantones_ultima_fecha) %>%
     tiles = providers$OpenStreetMap.Mapnik
   )
 ```
+
