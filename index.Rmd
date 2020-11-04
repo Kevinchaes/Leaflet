@@ -23,7 +23,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Para esta tarea, desarrollamos un mapa para la Web, mediante la biblioteca Leaflet, de la situación actual de la crisis sanitaria por COVID-19 por cantones en Costa Rica. Este mapa Web consta de 4 capas:
   
-  * Casos positivos de COVID-19 en cantones de Costa Rica.
+* Casos positivos de COVID-19 en cantones de Costa Rica.
 
 * Casos activos de COVID-19 en cantones de Costa Rica.
 
