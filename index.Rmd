@@ -1,6 +1,6 @@
 ---
-title: "El paquete Leaflet"
-author: 
+title: "El paquete Leaflet en casos covid Costa Rica"
+author: "Maria DIlena Cruz Fernández, Kevin Chavarría Esquivel y Álvaro Vásquez Anchia"
 date: "2020-10-21"
 output:
   html_document:
@@ -19,6 +19,20 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
+## Descripción:
+
+Para esta tarea, desarrollamos un mapa para la Web, mediante la biblioteca Leaflet, de la situación actual de la crisis sanitaria por COVID-19 por cantones en Costa Rica. Este mapa Web consta de 4 capas:
+  
+  * Casos positivos de COVID-19 en cantones de Costa Rica.
+
+* Casos activos de COVID-19 en cantones de Costa Rica.
+
+* Casos recuperados de COVID-19 en cantones de Costa Rica.
+
+* Casos fallecidos de COVID-19 en cantones de Costa Rica.
+
+## Librerias utilizadas
+
 ```{r message = FALSE}
 library(sf)
 library(dplyr)
@@ -27,12 +41,15 @@ library(dplyr)
 library(tidyr)
 ```
 
+## Cantón desde SNIT
+
 ```{r}
 cr_cantones <- st_read(paste0("http://geos.snitcr.go.cr/be/IGN_5/wfs?", "request=GetFeature&service=WFS&version=2.0.0&typeName=IGN_5:limitecantonal_5k&outputFormat=application/json")) %>%
   st_simplify(dTolerance = 1000) %>% 
   st_transform(4326) -> sf_cantones
 ```
 
+## Procesado de datos del Ministerio de Salud
 
 ```{r}
 {activos<- read.csv("https://raw.githubusercontent.com/pf0953-programaciongeoespacialr-2020/datos/master/covid19/ms/covid19-activos-cantones-20201027.csv") %>%
@@ -77,9 +94,13 @@ datos <- cbind(activos, fallecidos, positivos, recuperados) %>%
 
 ```
 
+## Unión de datos y vector 
+
 ```{r}
 df <- inner_join(sf_cantones, datos, by= c('cod_canton'))
 ```
+
+## Paletas de colores
 
 ```{r}
 bins <- c(0, 100, 500, 1000, 2000, Inf)
@@ -89,6 +110,8 @@ paleta_fallecidos <- colorBin("YlOrRd", domain = df$fallecidos, bins = bins)
 paleta_recuperados <- colorBin("YlOrRd", domain = df$recuperados, bins = bins)
 
 ```
+
+## Mapa de leaflet
 
 ```{r}
 leaflet(df) %>% 
