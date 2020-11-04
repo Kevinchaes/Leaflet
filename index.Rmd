@@ -75,13 +75,10 @@ recuperados <- recuperados %>%
 datos <- cbind(activos, fallecidos, positivos, recuperados) %>%
   select("activos", "fallecidos", "positivos", "recuperados", "cod_canton")
 
-df <- inner_join(sf_cantones, datos, by= c('cod_canton')) %>%
-  arrange(desc(activos))
 ```
 
 ```{r}
-df <- inner_join(sf_cantones, datos, by= c('cod_canton')) %>%
-  arrange(desc(activos))
+df <- inner_join(sf_cantones, datos, by= c('cod_canton'))
 ```
 
 ```{r}
